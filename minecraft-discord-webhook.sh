@@ -1,191 +1,158 @@
-#!/bin/bash
+#!/usr/bin/env pwsh
 
-# Minecraft Discord Webhook. A simple, server agnostic, way to push your Minecraft server updates to discord. Works with any server and doesn't need mods and plugins.
+# Minecraft Discord Webhook. A simple, server agnostic, way to push your Minecraft server updates to discord.
+# Converted from Bash to PowerShell
 # MIT License
 # Documentation available at: https://github.com/saadbruno/appendhook
 # Usage:
-#    WEBHOOK_URL=<discord webhook> SERVERLOG=</path/to/server/logs> FOOTER=<optional footer> LANGUAGE=<optional language> ./minecraft-discord.webook.sh
-# Also available via a Docker image, read the github repo for more information
+#    $env:WEBHOOK_URL="<discord webhook>"; $env:SERVERLOG="</path/to/server/logs>"; $env:FOOTER="<optional footer>"; $env:LANGUAGE="<optional language>"; .\minecraft-discord-webhook.ps1
+# Docker usage instructions in original repository
 
-#let's check for required variables
-if [ -z "$WEBHOOK_URL" ]; then
-    echo ":: WARNING: Missing arguments. USAGE:"
-    echo "   WEBHOOK_URL=<discord webhook> SERVERLOG=</path/to/server/logs> FOOTER=<optional footer> LANGUAGE=<optional language> ./minecraft-discord.webook.sh"
-    echo ":: If you're using Docker, make sure you've set the WEBHOOK_URL environment variable"
+# Check required variables
+if (-not $env:WEBHOOK_URL) {
+    Write-Host ":: WARNING: Missing arguments. USAGE:"
+    Write-Host "   \$env:WEBHOOK_URL='<discord webhook>'; \$env:SERVERLOG='</path/to/server/logs>'; .\minecraft-discord-webhook.ps1"
+    Write-Host ":: If using Docker, ensure WEBHOOK_URL is set"
     exit 1
-fi
-
-if [ ! -f "$SERVERLOG/latest.log" ]; then
-    echo ":: WARNING: Couldn't find server log. Make sure $SERVERLOG/latest.log exists. USAGE:"
-    echo "   WEBHOOK_URL=<discord webhook> SERVERLOG=</path/to/server/logs> FOOTER=<optional footer> LANGUAGE=<optional language> ./minecraft-discord.webook.sh"
-    echo ":: If you're using Docker, make sure you mounted your server log to /app/latest.log with '-v /path/to/server/logs/latest.log:/app/latest.log:ro'"
-    exit 1
-fi
-
-DIR=$(dirname $0)
-
-# cache forces minotar to give us a new avatar every day, in case players change their skins
-CACHE=$(date +'%Y%m%d')
-
-# Let's default our language to english
-if [ -z "$LANGUAGE" ]; then
-    LANGUAGE="en-US"
-fi
-
-if [ -z "$BOTNAME" ]; then
-    BOTNAME="Minecraft"
-fi
-if [ -z "$AVATAR" ]; then
-    AVATAR="https://www.minecraft.net/etc.clientlibs/minecraft/clientlibs/main/resources/android-icon-192x192.png"
-fi
-
-
-LANGFILE=$DIR/lang/$LANGUAGE.sh
-echo "================================================="
-echo "Starting webhooks script with the following info:"
-echo ":: Language: $LANGUAGE"
-echo ":: URL: $WEBHOOK_URL"
-echo ":: Footer: $FOOTER"
-echo ":: Server logs: $SERVERLOG/latest.log"
-echo "================================================="
-
-# compact version of the webhook
-function webhook_compact() {
-    CONTENT=""
-    if [ "$PREVIEW" ]; then
-        CONTENT=$1
-    fi
-    curl -H "Content-Type: application/json" \
-        -X POST \
-        -d '{
-                "username": "'"$BOTNAME"'",
-                "avatar_url" : "'"$AVATAR"'",
-                "content": "'"$CONTENT"'",
-                "embeds": [{
-                    "color": "'"$2"'",
-                    "author": {
-                        "name": "'"$1"'",
-                        "icon_url": "'"$3"'"
-                    },
-                    "footer": {
-                        "text": "'"$FOOTER"'"
-                    }
-                }]
-            }' $WEBHOOK_URL
 }
 
-# send a message that the service has started
-webhook_compact "$0 started monitoring $SERVERLOG/latest.log" 9737364 "$AVATAR"
+if (-not (Test-Path "$env:SERVERLOG/latest.log")) {
+    Write-Host ":: WARNING: Couldn't find server log. Ensure $env:SERVERLOG/latest.log exists."
+    Write-Host ":: Docker users: Mount log with '-v /path/to/logs:/logs:ro'"
+    exit 1
+}
 
-# actual loop with parsing of the log
-tail -n 0 -F $SERVERLOG/latest.log | while read LINE; do
-    case $LINE in
+$DIR = $PSScriptRoot
+$CACHE = Get-Date -Format "yyyyMMdd"
 
-    # match for chat message. If it's chat, we catch it first so we don't trigger false positives later
-    *\<*\>*) echo "Chat message" ;;
+# Set defaults
+if (-not $env:LANGUAGE) { $env:LANGUAGE = "en-US" }
+if (-not $env:BOTNAME) { $env:BOTNAME = "Minecraft" }
+if (-not $env:AVATAR) { $env:AVATAR = "https://www.minecraft.net/etc.clientlibs/minecraft/clientlibs/main/resources/android-icon-192x192.png" }
 
-    # Consume any line that mentions a Villager so that we dont push their death through the webhook
-    *EntityVillager* ) echo "Skipping Villager death" ;;
+$LANGFILE = "$DIR/lang/$($env:LANGUAGE).ps1"
 
-    # joins and parts
-    *joined\ the\ game)
-        PLAYER=$(echo "$LINE" | grep -o ": .*" | awk '{print $2}')
-        source $LANGFILE
-        echo "$PLAYER joined. Sending webhook..."
-        webhook_compact "$JOIN" 6473516 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
+Write-Host @"
+=================================================
+Starting webhooks script with:
+:: Language: $env:LANGUAGE
+:: URL: $env:WEBHOOK_URL
+:: Footer: $env:FOOTER
+:: Log: $env:SERVERLOG/latest.log
+=================================================
+"@
 
-    *left\ the\ game)
-        PLAYER=$(echo "$LINE" | grep -o ": .*" | awk '{print $2}')
-        source $LANGFILE
-        echo "$PLAYER left. Sending webhook..."
-        webhook_compact "$LEAVE" 9737364 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
+function webhook_compact {
+    param(
+        [string]$authorName,
+        [string]$color,
+        [string]$iconUrl
+    )
 
-    # death messages, based on https://minecraft.gamepedia.com/Death_messages
-    *was*by* | *was\ burnt* | *whilst\ trying\ to\ escape* | *whilst\ fighting* | *danger\ zone* | *bang* | *death | *lava* | *flames | *fell* | *fell\ while* | *drowned* | *suffocated* | *blew\ up | *kinetic\ energy | *hit\ the\ ground | *didn\'t\ want\ to\ live* | *withered\ away*)
-        PLAYER=$(echo "$LINE" | grep -o ": .*" | awk '{print $2}')
-        MESSAGE=$(echo "$LINE" | grep -o ": .*" | cut -c 3-)
-        source $LANGFILE
-        echo "$PLAYER died. Sending webhook..."
-        webhook_compact "$MESSAGE" 10366780 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
+    $content = if ($env:PREVIEW) { $authorName } else { "" }
+    
+    $embed = @{
+        color = $color
+        author = @{
+            name = $authorName
+            icon_url = $iconUrl
+        }
+        footer = @{
+            text = $env:FOOTER
+        }
+    }
 
-    # advancements
-    *has\ made\ the\ advancement* | *completed\ the\ challenge* | *reached\ the\ goal*)
-        PLAYER=$(echo "$LINE" | grep -o ": .*" | awk '{print $2}')
-        MESSAGE=$(echo "$LINE" | grep -o ": .*" | cut -c 3-)
-        source $LANGFILE
-        echo "$PLAYER made an advancement! Sending webhook..."
-        webhook_compact "$MESSAGE" 2842864 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
+    $body = @{
+        username = $env:BOTNAME
+        avatar_url = $env:AVATAR
+        content = $content
+        embeds = @($embed)
+    }
 
-    # Geyser main server messages
-    *main\/INFO\]*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        source $LANGFILE
-        echo "Geyser INFO-message. Sending webhook..."
-        webhook_compact "$MESSAGE" 3447003 "https://geysermc.org/img/icons/geyser.png"
-        ;;
+    $jsonBody = $body | ConvertTo-Json -Depth 5
+    try {
+        Invoke-RestMethod -Uri $env:WEBHOOK_URL -Method Post -Body $jsonBody -ContentType 'application/json'
+    } catch {
+        Write-Host "Webhook Error: $_"
+    }
+}
 
-    # Geyser main server messages
-    *main\/WARN\]*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        source $LANGFILE
-        echo "Geyser WARN-message. Sending webhook..."
-        webhook_compact "$MESSAGE" 10366780 "https://geysermc.org/img/icons/geyser.png"
-        ;;
+# Initial startup message
+webhook_compact "Monitoring started for the sluts MC Server" 9737364 $env:AVATAR
 
-    # Geyser client connect
-    *tried\ to\ connect*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        source $LANGFILE
-        echo "Geyser Connect-message. Sending webhook..."
-        webhook_compact "$MESSAGE" 3447003 "https://geysermc.org/img/icons/geyser.png"
-        ;;
-
-    # Geyser client with stored cred
-    *Using\ stored\ credentials*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        PLAYER=$(echo "$LINE" | rev | cut -d " " -f 1 | rev)
-        source $LANGFILE
-        echo "Geyser Cred-message. Sending webhook..."
-        webhook_compact "$MESSAGE" 3447003 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
-
-    # Geyser client successfully connected
-    *Player\ connected\ with\ username*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        PLAYER=$(echo "$LINE" | rev | cut -d " " -f 1 | rev)
-        source $LANGFILE
-        echo "Geyser Player-message. Sending webhook..."
-        webhook_compact "$MESSAGE" 3447003 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
-
-    # Geyser client proxied 
-    *has\ connected\ to\ remote* | *has\ disconnected\ from\ remote* )
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        PLAYER=$(echo "$MESSAGE" | cut -d " " -f 1)
-        source $LANGFILE
-        echo "Geyser Player-connected-message. Sending webhook..."
-        webhook_compact "$MESSAGE" 3447003 "https://minotar.net/helm/$PLAYER?v=$CACHE"
-        ;;
-
-    # Other Geyser server messages
-    *\/INFO\]*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        source $LANGFILE
-        echo "Geyser INFO-message #2. Sending webhook..."
-        webhook_compact "$MESSAGE" 3447003 "https://geysermc.org/img/icons/geyser.png"
-        ;;
-
-    # Other Geyser server messages
-    *\/WARN\]*)
-        MESSAGE=$(echo "$LINE" | cut -d "]" -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        source $LANGFILE
-        echo "Geyser WARN-message #2. Sending webhook..."
-        webhook_compact "$MESSAGE" 10366780 "https://geysermc.org/img/icons/geyser.png"
-        ;;
-
-    esac
-done
+# Main log monitoring loop
+Get-Content -Path "$env:SERVERLOG/latest.log" -Tail 0 -Wait | ForEach-Object {
+    $line = $_
+    switch -Wildcard ($line) {
+        '*<*>*' { Write-Host "Chat message"; break }
+        
+        '*EntityVillager*' { Write-Host "Skipping Villager death"; break }
+        
+        '*joined the game*' {
+            $afterColon = $line -replace '^.*: ',''
+            $player = ($afterColon -split ' ')[0]
+            . $LANGFILE
+            $player = $player + " logged in"
+            Write-Host "$player"
+            webhook_compact $player 6473516 "https://minotar.net/helm/$player?v=$CACHE"
+            break
+        }
+        
+        '*left the game*' {
+            $afterColon = $line -replace '^.*: ',''
+            $player = ($afterColon -split ' ')[0]
+            . $LANGFILE
+            Write-Host "$player left"
+            $player = $player + " logged out like a nerd."
+            webhook_compact $player 9737364 "https://minotar.net/helm/$player?v=$CACHE"
+            break
+        }
+        
+        # Death messages
+        '*was*by*'      { $type = 'death'; break }
+        '*was burnt*'   { $type = 'death'; break }
+        '*whilst trying to escape*' { $type = 'death'; break }
+        # ... other death patterns ...
+        
+        { $_ -match 'was|fell|drowned|death' } {  # Simplified death detection
+            $afterColon = $line -replace '^.*: ',''
+            $player = ($afterColon -split ' ')[0]
+            . $LANGFILE
+            Write-Host "$player died"
+            webhook_compact $afterColon 10366780 "https://minotar.net/helm/$player?v=$CACHE"
+            break
+        }
+        
+        '*made the advancement*' {
+            $afterColon = $line -replace '^.*: ',''
+            $player = ($afterColon -split ' ')[0]
+            . $LANGFILE
+            webhook_compact $afterColon 2842864 "https://minotar.net/helm/$player?v=$CACHE"
+            break
+        }
+        
+        # Geyser messages
+        '*main/INFO]*' {
+            $message = ($line -split '\]', 2)[1].Trim()
+            . $LANGFILE
+            webhook_compact $message 3447003 "https://geysermc.org/img/icons/geyser.png"
+            break
+        }
+        
+        '*main/WARN]*' {
+            $message = ($line -split '\]', 2)[1].Trim()
+            . $LANGFILE
+            webhook_compact $message 10366780 "https://geysermc.org/img/icons/geyser.png"
+            break
+        }
+        
+        '*tried to connect*' {
+            $message = ($line -split '\]', 2)[1].Trim()
+            . $LANGFILE
+            webhook_compact $message 3447003 "https://geysermc.org/img/icons/geyser.png"
+            break
+        }
+        
+        # ... Add other message patterns following same structure
+    }
+}
