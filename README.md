@@ -23,9 +23,11 @@ This script works by reading your server log file, parsing and formatting it usi
 
 - Clone the repo
 - In Powershell, run: 
+```
 $env:WEBHOOK_URL='YourDiscordWebhookURL'
 $env:SERVERLOG='C:\Path\To\Your\MC\Folder\For\logs'
 .\minecraft-discord-webhook.ps1
+```
 
 ## Variables
 
