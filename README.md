@@ -1,7 +1,7 @@
 # minecraft-discord-webhook
 
 This was forked from the original bash version [here](https://github.com/saadbruno/minecraft-discord-webhook).
-I then ran it through Deepseek and made some minor modifications to make a powershell version.
+I then ran it through Deepseek and made some minor modifications to make a powershell version for any windows-based MC hosts.
 There's definitely some jank to it, but it does functionally work! YMMV. 
  
 A small, server agnostic, way to push your Minecraft server updates to Discord
