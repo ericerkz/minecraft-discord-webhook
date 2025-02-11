@@ -78,7 +78,7 @@ function webhook_compact {
 }
 
 # Initial startup message
-webhook_compact "Monitoring started for the sluts MC Server" 9737364 $env:AVATAR
+webhook_compact "Monitoring started for the MC Server" 9737364 $env:AVATAR
 
 # Main log monitoring loop
 Get-Content -Path "$env:SERVERLOG/latest.log" -Tail 0 -Wait | ForEach-Object {
