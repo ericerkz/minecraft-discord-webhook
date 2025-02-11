@@ -16,7 +16,7 @@ A small, server agnostic, way to push your Minecraft server updates to Discord
 
 ![image](https://user-images.githubusercontent.com/23201434/120118752-7e06c880-c16a-11eb-84fb-cce9fb123b38.png)
 
-This script will push your easily push:
+This script will push your:
 
 - Server joins and leaves
 - Deaths
