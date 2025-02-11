@@ -1,5 +1,9 @@
 # minecraft-discord-webhook
 
+This was forked from [here](https://github.com/saadbruno/minecraft-discord-webhook).
+I then ran it through Deepseek and made some minor modifications to make a powershell version.
+There's definitely some jank to it, but it does functionally work! YMMV. 
+ 
 A small, server agnostic, way to push your Minecraft server updates to Discord
 
 ![image](https://user-images.githubusercontent.com/23201434/120118752-7e06c880-c16a-11eb-84fb-cce9fb123b38.png)
@@ -14,39 +18,14 @@ to a Discord Webhook easily, with minimal configuration, and without needing ser
 
 This script works by reading your server log file, parsing and formatting it using Discord rich embeds, and pushing it to the webhook endpoint.
 
-## Usage
-
-### With Docker
-
-There's an image avaible on [Docker Hub](https://hub.docker.com/r/saadbruno/minecraft-discord-webhook)!
-
-#### Docker run
-
-`docker run --name minecraft-discord-webhook -v /path/to/server/logs:/app/logs:ro --env WEBHOOK_URL=https://discord.com/api/webhooks/111222333/aaabbbccc --env FOOTER=Optional\ Footer\ Text --env LANGUAGE=en-US saadbruno/minecraft-discord-webhook:latest`
-> Note: FOOTER and LANGUAGE are optional
-
-#### Docker Compose
-
-```
-version: '3.3'
-services:
-    minecraft-discord-webhook:
-        container_name: minecraft-discord-webhook
-        volumes:
-            - '/path/to/server/logs:/app/logs:ro'
-        environment:
-            - 'WEBHOOK_URL=https://discord.com/api/webhooks/111222333/aaabbbccc'
-            - 'FOOTER=Optional Footer Text'
-            - 'LANGUAGE=en-US'
-        image: 'saadbruno/minecraft-discord-webhook:latest'
-        restart: unless-stopped
-```
-
-> Note: FOOTER and LANGUAGE are optional
 
 ### Without Docker
 
 - Clone the repo
+- In Powershell, run: 
+$env:WEBHOOK_URL='YourDiscordWebhookURL'
+$env:SERVERLOG='C:\Path\To\Your\MC\Folder\For\logs'
+
 - run `WEBHOOK_URL=<discord webhook> SERVERLOG=</path/to/server/logs> FOOTER=<optional footer> LANGUAGE=<optional language> ./minecraft-discord.webook.sh`
 
 ## Variables
