@@ -27,8 +27,6 @@ $env:WEBHOOK_URL='YourDiscordWebhookURL'
 $env:SERVERLOG='C:\Path\To\Your\MC\Folder\For\logs'
 .\minecraft-discord-webhook.ps1
 
-- run `WEBHOOK_URL=<discord webhook> SERVERLOG=</path/to/server/logs> FOOTER=<optional footer> LANGUAGE=<optional language> ./minecraft-discord.webook.sh`
-
 ## Variables
 
 - WEBHOOK_URL: it's the discord webhook you want the notifications posted to. Read more at [Discord Support](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
