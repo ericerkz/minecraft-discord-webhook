@@ -47,6 +47,3 @@ $env:SERVERLOG='C:\Path\To\Your\MC\Folder\For\logs'
 - BOTNAME: Name of the bot in the Discord channel. Defaults to "Minecraft"
 - PREVIEW: If set - will also add a preview of the message in the Discord channel
 
-## Notes on logs
-
-You have to pass the **entire logs diretory path** to the script, rather than just the `latest.log`. This is due to how Docker volumes work. If we're mounting just the `latest.log` file, when the Minecraft server rotates that log, Docker will not mount the new file automatically.
