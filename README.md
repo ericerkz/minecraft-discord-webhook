@@ -1,6 +1,6 @@
 # minecraft-discord-webhook
 
-This was forked from the bash version [here](https://github.com/saadbruno/minecraft-discord-webhook).
+This was forked from the original bash version [here](https://github.com/saadbruno/minecraft-discord-webhook).
 I then ran it through Deepseek and made some minor modifications to make a powershell version.
 There's definitely some jank to it, but it does functionally work! YMMV. 
  
