@@ -19,7 +19,7 @@ to a Discord Webhook easily, with minimal configuration, and without needing ser
 This script works by reading your server log file, parsing and formatting it using Discord rich embeds, and pushing it to the webhook endpoint.
 
 
-### Without Docker
+### How to run:
 
 - Clone the repo
 - In Powershell, run: 
