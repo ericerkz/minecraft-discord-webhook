@@ -30,6 +30,7 @@ This script works by reading your server log file, parsing and formatting it usi
 ### How to run:
 
 - Clone the repo
+- Place lang folder and minecraft-discord-webhook.ps1 in root folder of your MC Server
 - In Powershell, run: 
 ```
 $env:WEBHOOK_URL='YourDiscordWebhookURL'
